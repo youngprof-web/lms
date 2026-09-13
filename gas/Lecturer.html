@@ -1,0 +1,80 @@
+<!-- Lecturer Dashboard: Lecturer.html -->
+<div id="lecturer-view" class="lecturer-dashboard-container" style="display: none;">
+  <div class="view-header">
+    <div>
+      <span class="badge badge-purple">Lecturer Studio</span>
+      <h1 class="view-title">Curriculum Management & Assessment Hub</h1>
+      <p class="view-subtitle">Author modules, upload learning notes to Google Drive, and grade student submissions.</p>
+    </div>
+    <div class="view-actions">
+      <button class="btn btn-primary" onclick="openNewCourseModal()">
+        ➕ New Course
+      </button>
+    </div>
+  </div>
+
+  <!-- Lecturer Tabs -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchLecturerSection('courses')">My Courses</button>
+    <button class="admin-tab" onclick="switchLecturerSection('grading')">Submissions to Grade</button>
+    <button class="admin-tab" onclick="switchLecturerSection('announcements')">Post Announcement</button>
+  </div>
+
+  <!-- Section: My Courses -->
+  <div id="lecturer-section-courses" class="admin-content-section">
+    <div class="courses-grid" id="lecturer-courses-grid">
+      <!-- Dynamically populated courses -->
+    </div>
+  </div>
+
+  <!-- Section: Submissions to Grade -->
+  <div id="lecturer-section-grading" class="admin-content-section" style="display: none;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>Pending Student Deliverables</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Assignment</th>
+              <th>Submitted</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="lecturer-submissions-tbody">
+            <!-- Dynamically populated submissions -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Announcements -->
+  <div id="lecturer-section-announcements" class="admin-content-section" style="display: none;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>Publish Course Notice</h3>
+      </div>
+      <form onsubmit="handleLecturerPostAnnouncement(event)" class="settings-form">
+        <div class="form-group">
+          <label>Notice Title</label>
+          <input type="text" id="ann-title" required placeholder="e.g. Midterm Examination Schedule" />
+        </div>
+        <div class="form-group">
+          <label>Target Course</label>
+          <select id="ann-course" required>
+            <!-- Dynamically loaded courses -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Announcement Details</label>
+          <textarea id="ann-content" rows="4" required placeholder="Enter announcement text..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Post Announcement</button>
+      </form>
+    </div>
+  </div>
+</div>

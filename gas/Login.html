@@ -1,0 +1,97 @@
+<!-- Login and authentication interface: Login.html -->
+<div id="login-view" class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-brand">
+        <span class="auth-logo">🎓</span>
+        <h2>Google Apps Script LMS</h2>
+      </div>
+      <p class="auth-tagline">Cloud Learning Platform powered by Google Sheets & Drive</p>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login-btn" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register-btn" onclick="switchAuthTab('register')">Register</button>
+      <button class="auth-tab" id="tab-recover-btn" onclick="switchAuthTab('recover')">Forgot Password</button>
+    </div>
+
+    <!-- Status Message Alert -->
+    <div id="auth-alert" class="auth-alert" style="display: none;"></div>
+
+    <!-- Form: Sign In -->
+    <form id="form-login" class="auth-form" onsubmit="handleGasLogin(event)">
+      <div class="form-group">
+        <label for="login-email">Email Address</label>
+        <input type="email" id="login-email" required placeholder="name@university.edu" autocomplete="email" />
+      </div>
+
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password" />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="btn-submit-login">
+        Sign In to Portal
+      </button>
+
+      <!-- Quick Demo Role Logins -->
+      <div class="demo-logins">
+        <p class="demo-title">Quick Demo Sign In</p>
+        <div class="demo-buttons">
+          <button type="button" class="btn btn-sm btn-outline" onclick="fillDemoCredentials('student')">
+            👨‍🎓 Student
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="fillDemoCredentials('lecturer')">
+            👨‍🏫 Lecturer
+          </button>
+          <button type="button" class="btn btn-sm btn-outline" onclick="fillDemoCredentials('admin')">
+            🛡️ Admin
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Form: Register -->
+    <form id="form-register" class="auth-form" style="display: none;" onsubmit="handleGasRegister(event)">
+      <div class="form-group">
+        <label for="reg-name">Full Name</label>
+        <input type="text" id="reg-name" required placeholder="e.g. Alex Morgan" />
+      </div>
+
+      <div class="form-group">
+        <label for="reg-email">Email Address</label>
+        <input type="email" id="reg-email" required placeholder="alex@university.edu" />
+      </div>
+
+      <div class="form-group">
+        <label for="reg-role">Account Role</label>
+        <select id="reg-role" required>
+          <option value="student">Student (Study & Complete Quizzes)</option>
+          <option value="lecturer">Lecturer (Teach & Grade Submissions)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-password">Password</label>
+        <input type="password" id="reg-password" required minlength="6" placeholder="At least 6 characters" />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="btn-submit-register">
+        Create LMS Account
+      </button>
+    </form>
+
+    <!-- Form: Password Recovery -->
+    <form id="form-recover" class="auth-form" style="display: none;" onsubmit="handleGasRecoverPassword(event)">
+      <div class="form-group">
+        <label for="recover-email">Registered Email Address</label>
+        <input type="email" id="recover-email" required placeholder="name@university.edu" />
+      </div>
+      <p class="form-hint">A password reset verification link will be dispatched via Google Workspace Mail.</p>
+      <button type="submit" class="btn btn-primary btn-block">
+        Send Reset Link
+      </button>
+    </form>
+  </div>
+</div>

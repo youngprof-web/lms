@@ -1,0 +1,204 @@
+<!-- Administrator Dashboard: Admin.html -->
+<div id="admin-view" class="admin-dashboard-container" style="display: none;">
+  <!-- Header Bar -->
+  <div class="view-header">
+    <div>
+      <span class="badge badge-amber">Administrator Control Panel</span>
+      <h1 class="view-title">Institutional Management & System Oversight</h1>
+      <p class="view-subtitle">Synchronized directly with Google Sheets 15 relational tables & Google Drive storage.</p>
+    </div>
+    <div class="view-actions">
+      <button class="btn btn-dark" onclick="triggerDatabaseBackup()">
+        💾 Backup Data
+      </button>
+      <button class="btn btn-primary" onclick="openAddUserModal()">
+        ➕ Add User
+      </button>
+      <button class="btn btn-success" onclick="openNewCourseModal()">
+        ➕ Add Course
+      </button>
+    </div>
+  </div>
+
+  <!-- Metric Statistics -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value" id="admin-stat-users">--</div>
+      <div class="stat-sub">Across Students & Faculty</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active Curricula</div>
+      <div class="stat-value" id="admin-stat-courses">--</div>
+      <div class="stat-sub">Published & Pending Review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Course Enrollments</div>
+      <div class="stat-value" id="admin-stat-enrollments">--</div>
+      <div class="stat-sub">Active Class Registrations</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Database Status</div>
+      <div class="stat-value">15 Tables</div>
+      <div class="stat-sub">Google Sheets Connected</div>
+    </div>
+  </div>
+
+  <!-- Administration Action Hub -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchAdminSection('users')">Users & Roles</button>
+    <button class="admin-tab" onclick="switchAdminSection('courses')">Course Approvals</button>
+    <button class="admin-tab" onclick="switchAdminSection('enrollments')">Enrollment Roster</button>
+    <button class="admin-tab" onclick="switchAdminSection('reports')">Reports & Export</button>
+    <button class="admin-tab" onclick="switchAdminSection('logs')">Activity Logs</button>
+    <button class="admin-tab" onclick="switchAdminSection('settings')">Settings</button>
+  </div>
+
+  <!-- Section: Users & Roles -->
+  <div id="admin-section-users" class="admin-content-section">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>User Accounts Roster</h3>
+        <div class="flex gap-2">
+          <button class="btn btn-sm btn-outline" onclick="exportTableToCsv('Users')">Export CSV</button>
+          <button class="btn btn-sm btn-primary" onclick="openAddUserModal()">+ Add User</button>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table" id="admin-users-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-users-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Course Approvals -->
+  <div id="admin-section-courses" class="admin-content-section" style="display: none;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>Course Offerings & Syllabus Review</h3>
+        <button class="btn btn-sm btn-primary" onclick="openNewCourseModal()">+ Add Course</button>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table" id="admin-courses-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Title</th>
+              <th>Lecturer</th>
+              <th>Level</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-courses-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Enrollments -->
+  <div id="admin-section-enrollments" class="admin-content-section" style="display: none;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>Enrollment Management</h3>
+        <button class="btn btn-sm btn-outline" onclick="exportTableToCsv('Enrollments')">Export CSV</button>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table" id="admin-enrollments-table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Course</th>
+              <th>Progress</th>
+              <th>Enrolled Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admin-enrollments-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Reports & Export -->
+  <div id="admin-section-reports" class="admin-content-section" style="display: none;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>Institutional Data Export</h3>
+      </div>
+      <p class="section-description">Export raw relational records from linked Google Spreadsheet tabs to CSV files:</p>
+      <div class="export-buttons-grid">
+        <button class="btn btn-outline" onclick="exportTableToCsv('Users')">Download Users Table</button>
+        <button class="btn btn-outline" onclick="exportTableToCsv('Courses')">Download Courses Table</button>
+        <button class="btn btn-outline" onclick="exportTableToCsv('Enrollments')">Download Enrollments Table</button>
+        <button class="btn btn-outline" onclick="exportTableToCsv('Grades')">Download Grades Table</button>
+        <button class="btn btn-outline" onclick="exportTableToCsv('ActivityLogs')">Download Audit Logs</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Activity Logs -->
+  <div id="admin-section-logs" class="admin-content-section" style="display: none;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>System Activity Logs</h3>
+        <button class="btn btn-sm btn-outline" onclick="exportTableToCsv('ActivityLogs')">Export Logs</button>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>User</th>
+              <th>Action</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="admin-logs-tbody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section: Settings -->
+  <div id="admin-section-settings" class="admin-content-section" style="display: none;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>Institutional Settings</h3>
+      </div>
+      <form onsubmit="handleSaveGasSettings(event)" class="settings-form">
+        <div class="form-group">
+          <label>Institution Name</label>
+          <input type="text" id="setting-inst-name" value="State University of Technology" />
+        </div>
+        <div class="form-group">
+          <label>Academic Term</label>
+          <input type="text" id="setting-term" value="Fall 2025 Semester" />
+        </div>
+        <div class="form-group">
+          <label>Google Drive Uploads Folder</label>
+          <input type="text" id="setting-drive-folder" value="LMS_Uploads_Storage" />
+        </div>
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+      </form>
+    </div>
+  </div>
+</div>

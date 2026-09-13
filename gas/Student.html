@@ -1,0 +1,63 @@
+<!-- Student Dashboard: Student.html -->
+<div id="student-view" class="student-dashboard-container" style="display: none;">
+  <!-- Student Header -->
+  <div class="view-header">
+    <div>
+      <span class="badge badge-blue">Student Portal</span>
+      <h1 class="view-title">Welcome back, <span id="student-name-display">Student</span></h1>
+      <p class="view-subtitle">Access learning modules, download Google Drive PDF notes, and track your grades.</p>
+    </div>
+    <div class="view-actions">
+      <button class="btn btn-outline" onclick="switchStudentSection('catalog')">
+        🔍 Explore Courses
+      </button>
+    </div>
+  </div>
+
+  <!-- Student Navigation Tabs -->
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchStudentSection('my-courses')">My Enrolled Courses</button>
+    <button class="admin-tab" onclick="switchStudentSection('catalog')">Course Catalog</button>
+    <button class="admin-tab" onclick="switchStudentSection('grades')">My Grades & Results</button>
+  </div>
+
+  <!-- Section: My Enrolled Courses -->
+  <div id="student-section-my-courses" class="admin-content-section">
+    <div class="courses-grid" id="student-enrolled-grid">
+      <!-- Dynamically populated enrolled courses -->
+    </div>
+  </div>
+
+  <!-- Section: Catalog -->
+  <div id="student-section-catalog" class="admin-content-section" style="display: none;">
+    <div class="courses-grid" id="student-catalog-grid">
+      <!-- Dynamically populated catalog courses with 'Enroll' button -->
+    </div>
+  </div>
+
+  <!-- Section: Grades -->
+  <div id="student-section-grades" class="admin-content-section" style="display: none;">
+    <div class="section-card">
+      <div class="section-card-header">
+        <h3>Academic Performance & Transcripts</h3>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Assessment</th>
+              <th>Type</th>
+              <th>Score</th>
+              <th>Percentage</th>
+              <th>Feedback</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="student-grades-tbody">
+            <!-- Dynamically populated grades -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

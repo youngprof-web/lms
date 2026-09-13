@@ -1,0 +1,6 @@
+{
+  "name": "Google Apps Script LMS",
+  "description": "A complete, mobile-responsive Learning Management System powered by Google Apps Script, Google Sheets, Google Drive, HTML5, CSS3, and vanilla JavaScript.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

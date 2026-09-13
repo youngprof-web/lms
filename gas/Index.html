@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><?= appName ?> - Learning Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <?!= include('Styles'); ?>
+</head>
+<body>
+
+  <!-- Loading State Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="spinner" style="width: 42px; height: 42px; border-width: 4px;"></div>
+    <div id="loadingText" style="font-weight: 600; color: var(--text-main);">Processing request...</div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Main Application Wrapper -->
+  <div class="app-container">
+    
+    <!-- Sidebar Overlay for Mobile -->
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar(false)"></div>
+
+    <!-- Responsive Sidebar Navigation -->
+    <aside id="appSidebar" class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="brand-icon">🎓</div>
+          <span>Cloud LMS</span>
+        </div>
+        <button class="btn-icon" style="color: #94A3B8; border-color: transparent;" onclick="toggleSidebar(false)">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebarNavItems">
+        <!-- Dynamically rendered according to user role or public state -->
+      </nav>
+
+      <div class="sidebar-footer" id="sidebarFooterUser">
+        <!-- Rendered by JavaScript based on active session -->
+      </div>
+    </aside>
+
+    <!-- App Header Bar -->
+    <header class="app-header">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <button id="mobileMenuBtn" class="btn-icon" onclick="toggleSidebar(true)" aria-label="Open menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <div class="brand-logo">
+          <span id="pageHeaderTitle">Dashboard</span>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <button id="quickRoleSwitchBtn" class="btn btn-secondary btn-sm" onclick="showRoleSwitcherModal()">
+          <span id="headerRoleBadge" class="badge badge-primary">Student</span>
+          <span style="font-size: 12px; color: var(--text-muted); margin-left: 4px;">▼</span>
+        </button>
+
+        <div id="headerAuthActions">
+          <!-- Rendered login/register or profile avatar -->
+        </div>
+      </div>
+    </header>
+
+    <!-- Main View Routing Container -->
+    <main class="app-main">
+      <div class="content-container">
+        
+        <!-- VIEW 1: LANDING PAGE -->
+        <section id="viewLanding" class="view-section" style="display: none;">
+          <!-- Hero Section -->
+          <div class="card" style="background: linear-gradient(135deg, #1E293B, #0F172A); color: #fff; padding: 2.5rem; margin-bottom: 2rem;">
+            <div style="max-width: 680px;">
+              <span class="badge" style="background: rgba(37, 99, 235, 0.2); color: #60A5FA; margin-bottom: 1rem;">Next-Gen Cloud Learning</span>
+              <h1 style="color: #fff; font-size: 2.25rem; margin-bottom: 1rem;">Master in-demand skills with our interactive LMS</h1>
+              <p style="color: #94A3B8; font-size: 1.05rem; margin-bottom: 1.75rem;">
+                Powered entirely by Google Apps Script, Google Sheets database, and Google Drive storage. Fast, accessible, and free of hosting fees.
+              </p>
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <button class="btn btn-primary btn-lg" onclick="navigate('allCourses')">Browse Courses</button>
+                <button class="btn btn-secondary btn-lg" style="background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.2);" onclick="showAuthModal('register')">Create Free Account</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Featured Courses Section -->
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Explore Top Rated Courses</h2>
+              <p style="color: var(--text-muted); font-size: 14px;">Curated curricula built by seasoned university lecturers.</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="navigate('allCourses')">View All</button>
+          </div>
+
+          <div id="landingCoursesGrid" class="course-grid">
+            <!-- Dynamically populated -->
+          </div>
+        </section>
+
+        <!-- VIEW 2: STUDENT DASHBOARD -->
+        <section id="viewStudentDashboard" class="view-section" style="display: none;">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--primary-light); color: var(--primary);">📚</div>
+              <div>
+                <div class="stat-value" id="studentEnrolledCount">0</div>
+                <div class="stat-label">Enrolled Courses</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--success-light); color: var(--success);">🏆</div>
+              <div>
+                <div class="stat-value" id="studentCompletedCount">0</div>
+                <div class="stat-label">Completed Courses</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--warning-light); color: var(--warning);">📝</div>
+              <div>
+                <div class="stat-value" id="studentPendingAsgCount">0</div>
+                <div class="stat-label">Upcoming Assignments</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: #F3E8FF; color: #9333EA;">🎯</div>
+              <div>
+                <div class="stat-value" id="studentAvgGrade">88%</div>
+                <div class="stat-label">Average Performance</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- In-Progress Enrolled Courses -->
+          <div style="margin-bottom: 2rem;">
+            <div class="card-header">
+              <h2 class="card-title">Continue Learning</h2>
+              <button class="btn btn-secondary btn-sm" onclick="navigate('studentCourses')">My Courses</button>
+            </div>
+            <div id="studentActiveCoursesGrid" class="course-grid">
+              <!-- Enrolled courses cards -->
+            </div>
+          </div>
+
+          <!-- Announcements & Upcoming Tasks Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Recent Announcements</h3>
+                <button class="btn btn-secondary btn-sm" onclick="navigate('announcements')">View All</button>
+              </div>
+              <div id="studentDashboardAnnouncementsList"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Upcoming Deadlines</h3>
+                <button class="btn btn-secondary btn-sm" onclick="navigate('assignments')">Assignments</button>
+              </div>
+              <div id="studentUpcomingDeadlinesList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: COURSE CATALOG (ALL COURSES) -->
+        <section id="viewAllCourses" class="view-section" style="display: none;">
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+              <div style="flex: 1; min-width: 240px;">
+                <input type="text" id="courseSearchInput" class="form-control" placeholder="Search by course title, code, or keyword..." oninput="handleCourseFilter()">
+              </div>
+              <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <select id="courseCategoryFilter" class="form-control" style="width: auto;" onchange="handleCourseFilter()">
+                  <option value="All">All Categories</option>
+                  <option value="Computer Science">Computer Science</option>
+                  <option value="Data Science">Data Science</option>
+                  <option value="Artificial Intelligence">Artificial Intelligence</option>
+                  <option value="Business">Business</option>
+                </select>
+                <select id="courseLevelFilter" class="form-control" style="width: auto;" onchange="handleCourseFilter()">
+                  <option value="All">All Levels</option>
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="allCoursesCatalogGrid" class="course-grid">
+            <!-- Populated by JS -->
+          </div>
+        </section>
+
+        <!-- VIEW 4: INTERACTIVE COURSE & LESSON PLAYER -->
+        <section id="viewCoursePlayer" class="view-section" style="display: none;">
+          <!-- Course Header Bar -->
+          <div class="card" style="margin-bottom: 1.5rem;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+              <div>
+                <button class="btn btn-secondary btn-sm" onclick="navigate('studentCourses')" style="margin-bottom: 0.5rem;">
+                  ← Back to My Courses
+                </button>
+                <h1 id="playerCourseTitle" style="font-size: 1.4rem;">Course Title</h1>
+                <p id="playerCourseInstructor" style="color: var(--text-muted); font-size: 13.5px;">Instructor: Prof. Marcus Chen</p>
+              </div>
+              
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="text-align: right;">
+                  <div style="font-size: 12px; color: var(--text-muted);">Overall Progress</div>
+                  <div id="playerProgressPercent" style="font-weight: 700; color: var(--primary);">0%</div>
+                </div>
+                <div style="width: 140px;">
+                  <div class="progress-bar-bg">
+                    <div id="playerProgressBar" class="progress-bar-fill" style="width: 0%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Player Layout -->
+          <div class="lesson-layout">
+            <!-- Curriculum Navigation Sidebar -->
+            <div class="curriculum-sidebar">
+              <h3 style="font-size: 14px; margin-bottom: 0.75rem;">Curriculum Modules</h3>
+              <div id="playerCurriculumTree">
+                <!-- Modules and Lessons list -->
+              </div>
+            </div>
+
+            <!-- Content Presentation Stage -->
+            <div class="card">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                  <span id="playerLessonTypeBadge" class="badge badge-primary">Video Lesson</span>
+                  <h2 id="playerLessonTitle" style="font-size: 1.25rem; margin-top: 0.35rem;">Lesson Title</h2>
+                </div>
+                
+                <div style="display: flex; gap: 0.5rem;">
+                  <button id="btnPrevLesson" class="btn btn-secondary btn-sm" onclick="navigateLesson(-1)">Previous</button>
+                  <button id="btnNextLesson" class="btn btn-secondary btn-sm" onclick="navigateLesson(1)">Next</button>
+                  <button id="btnMarkComplete" class="btn btn-success btn-sm" onclick="markCurrentLessonComplete()">
+                    ✓ Mark as Completed
+                  </button>
+                </div>
+              </div>
+
+              <!-- Media Viewer: Video / Rich Text -->
+              <div id="playerMediaContainer">
+                <div id="playerVideoWrapper" class="video-container" style="display: none;">
+                  <iframe id="playerVideoIframe" src="" allowfullscreen></iframe>
+                </div>
+                
+                <div id="playerTextContent" style="background: var(--bg-main); padding: 1.5rem; border-radius: var(--radius-md); line-height: 1.7; font-size: 15px; margin-bottom: 1.5rem;">
+                  <!-- Text lesson content -->
+                </div>
+              </div>
+
+              <!-- Course Resources & Downloads (Drive Integration) -->
+              <div style="border-top: 1px solid var(--border-color); padding-top: 1.25rem; margin-top: 1.5rem;">
+                <h4 style="font-size: 14px; margin-bottom: 0.75rem;">Learning Materials & Drive Resources</h4>
+                <div id="playerMaterialsList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <!-- Material list items with Download buttons -->
+                </div>
+              </div>
+
+              <!-- Interactive Actions Bar -->
+              <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                <button id="btnOpenQuiz" class="btn btn-primary" onclick="openActiveCourseQuiz()">
+                  📝 Take Module Quiz
+                </button>
+                <button id="btnOpenAssignment" class="btn btn-secondary" onclick="openActiveCourseAssignment()">
+                  📤 Submit Assignment
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 5: LECTURER DASHBOARD -->
+        <section id="viewLecturerDashboard" class="view-section" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h1 style="font-size: 1.6rem;">Lecturer Studio</h1>
+              <p style="color: var(--text-muted);">Manage courses, upload learning materials, construct quizzes, and grade submissions.</p>
+            </div>
+            <button class="btn btn-primary" onclick="showNewCourseModal()">
+              + Create Course
+            </button>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--primary-light); color: var(--primary);">📖</div>
+              <div>
+                <div class="stat-value" id="lecturerCourseCount">0</div>
+                <div class="stat-label">Published Courses</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--warning-light); color: var(--warning);">📥</div>
+              <div>
+                <div class="stat-value" id="lecturerPendingGradesCount">0</div>
+                <div class="stat-label">Submissions to Grade</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--success-light); color: var(--success);">👥</div>
+              <div>
+                <div class="stat-value" id="lecturerTotalStudents">0</div>
+                <div class="stat-label">Enrolled Students</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lecturer Courses & Action Table -->
+          <div class="card" style="margin-bottom: 2rem;">
+            <div class="card-header">
+              <h3 class="card-title">My Courses Curriculum</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="table-lms">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Level</th>
+                    <th>Modules</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="lecturerCoursesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pending Assignment Submissions for Grading -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Pending Student Submissions</h3>
+            </div>
+            <div class="table-responsive">
+              <table class="table-lms">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Assignment</th>
+                    <th>Submitted At</th>
+                    <th>Status</th>
+                    <th>Points</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="lecturerSubmissionsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 6: ADMINISTRATOR DASHBOARD -->
+        <section id="viewAdminDashboard" class="view-section" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h1 style="font-size: 1.6rem;">LMS Administration Control</h1>
+              <p style="color: var(--text-muted);">Manage users, oversee enrollments, export data tables, and maintain system logs.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn btn-secondary btn-sm" onclick="exportLmsData('Users')">Export Users</button>
+              <button class="btn btn-secondary btn-sm" onclick="exportLmsData('Enrollments')">Export Enrollments</button>
+              <button class="btn btn-primary btn-sm" onclick="showNewUserModal()">+ Add New User</button>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--primary-light); color: var(--primary);">👥</div>
+              <div>
+                <div class="stat-value" id="adminTotalUsers">0</div>
+                <div class="stat-label">Total Users</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--success-light); color: var(--success);">📚</div>
+              <div>
+                <div class="stat-value" id="adminTotalCourses">0</div>
+                <div class="stat-label">Courses</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: var(--warning-light); color: var(--warning);">🎓</div>
+              <div>
+                <div class="stat-value" id="adminTotalEnrollments">0</div>
+                <div class="stat-label">Enrollments</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon-wrapper" style="background: #F3E8FF; color: #9333EA;">⚡</div>
+              <div>
+                <div class="stat-value" id="adminTotalLogs">0</div>
+                <div class="stat-label">Logged Events</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- User Management Table -->
+          <div class="card" style="margin-bottom: 2rem;">
+            <div class="card-header">
+              <h3 class="card-title">User Accounts & Roles</h3>
+              <input type="text" id="adminUserSearchInput" class="form-control" style="width: 220px;" placeholder="Search user..." oninput="filterAdminUsers()">
+            </div>
+            <div class="table-responsive">
+              <table class="table-lms">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUsersTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- System Activity Logs -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">Recent Activity Audit Logs</h3>
+              <button class="btn btn-secondary btn-sm" onclick="exportLmsData('ActivityLogs')">Export Logs CSV</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table-lms">
+                <thead>
+                  <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody id="adminLogsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 7: ANNOUNCEMENTS & NOTIFICATIONS -->
+        <section id="viewAnnouncements" class="view-section" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+              <h1 style="font-size: 1.6rem;">Campus Announcements</h1>
+              <p style="color: var(--text-muted);">Stay up to date with course notices and institutional bulletins.</p>
+            </div>
+            <button id="btnCreateAnnouncement" class="btn btn-primary btn-sm" onclick="showNewAnnouncementModal()">
+              + New Notice
+            </button>
+          </div>
+          <div id="announcementsListContainer" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Rendered by JS -->
+          </div>
+        </section>
+
+        <!-- VIEW 8: MESSAGES -->
+        <section id="viewMessages" class="view-section" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+              <h1 style="font-size: 1.6rem;">Direct Messages</h1>
+              <p style="color: var(--text-muted);">Communicate directly with course lecturers and peers.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showComposeMessageModal()">
+              ✉ Compose Message
+            </button>
+          </div>
+          <div id="messagesListContainer" style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Messages list -->
+          </div>
+        </section>
+
+        <!-- VIEW 9: RESULTS & GRADES -->
+        <section id="viewResults" class="view-section" style="display: none;">
+          <div style="margin-bottom: 1.5rem;">
+            <h1 style="font-size: 1.6rem;">Academic Grades & Transcripts</h1>
+            <p style="color: var(--text-muted);">Detailed records of graded assignments and quiz attempts.</p>
+          </div>
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table-lms">
+                <thead>
+                  <tr>
+                    <th>Assessment Title</th>
+                    <th>Type</th>
+                    <th>Score</th>
+                    <th>Max</th>
+                    <th>Percentage</th>
+                    <th>Date</th>
+                    <th>Lecturer Feedback</th>
+                  </tr>
+                </thead>
+                <tbody id="gradesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==============================================================================
+       MODALS & DIALOGS
+       ============================================================================== -->
+
+  <!-- AUTHENTICATION MODAL (Login / Register / Forgot Password) -->
+  <div id="modalAuth" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="authModalTitle" class="card-title">Account Login</h3>
+        <button class="btn-icon" onclick="closeModal('modalAuth')">✕</button>
+      </div>
+
+      <!-- Login Tab -->
+      <form id="formLogin" onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="loginEmail" class="form-control" required placeholder="name@lms.edu">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="loginPassword" class="form-control" required placeholder="••••••••">
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <a href="javascript:void(0)" onclick="toggleAuthForm('forgot')" style="font-size: 13px;">Forgot password?</a>
+          <a href="javascript:void(0)" onclick="toggleAuthForm('register')" style="font-size: 13px;">Need an account?</a>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In</button>
+      </form>
+
+      <!-- Register Tab -->
+      <form id="formRegister" onsubmit="handleRegisterSubmit(event)" style="display: none;">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" id="regName" class="form-control" required placeholder="Alex Rivera">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="regEmail" class="form-control" required placeholder="alex@lms.edu">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Desired Role</label>
+          <select id="regRole" class="form-control">
+            <option value="student">Student</option>
+            <option value="lecturer">Lecturer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="regPassword" class="form-control" required minlength="6" placeholder="Min. 6 characters">
+        </div>
+        <div style="margin-bottom: 1.25rem;">
+          <a href="javascript:void(0)" onclick="toggleAuthForm('login')" style="font-size: 13px;">Already have an account? Sign In</a>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+      </form>
+
+      <!-- Forgot Password Tab -->
+      <form id="formForgot" onsubmit="handleForgotSubmit(event)" style="display: none;">
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 1rem;">
+          Enter your registered email address and we'll transmit reset instructions.
+        </p>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" id="forgotEmail" class="form-control" required placeholder="name@lms.edu">
+        </div>
+        <div style="margin-bottom: 1.25rem;">
+          <a href="javascript:void(0)" onclick="toggleAuthForm('login')" style="font-size: 13px;">Return to Login</a>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Send Reset Instructions</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE QUIZ MODAL -->
+  <div id="modalQuiz" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 680px;">
+      <div class="modal-header">
+        <div>
+          <h3 id="quizModalTitle" class="card-title">Module Assessment</h3>
+          <span id="quizTimerText" style="font-size: 13px; color: var(--primary); font-weight: 600;">Time Remaining: 15:00</span>
+        </div>
+        <button class="btn-icon" onclick="closeModal('modalQuiz')">✕</button>
+      </div>
+
+      <div id="quizQuestionContainer">
+        <!-- Rendered question step -->
+      </div>
+
+      <div id="quizSummaryContainer" style="display: none; text-align: center; padding: 1.5rem 0;">
+        <!-- Rendered quiz score & feedback -->
+      </div>
+
+      <div id="quizFooterActions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <button id="btnQuizPrev" class="btn btn-secondary btn-sm" onclick="navQuizQuestion(-1)">Previous</button>
+        <div id="quizProgressDots" style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Question 1 of 4</div>
+        <button id="btnQuizNext" class="btn btn-primary btn-sm" onclick="navQuizQuestion(1)">Next</button>
+        <button id="btnQuizSubmit" class="btn btn-success btn-sm" style="display: none;" onclick="submitActiveQuiz()">Submit Answers</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ASSIGNMENT SUBMISSION MODAL (with Google Drive Upload) -->
+  <div id="modalAssignmentSubmit" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="asgSubmitTitle" class="card-title">Submit Assignment</h3>
+        <button class="btn-icon" onclick="closeModal('modalAssignmentSubmit')">✕</button>
+      </div>
+      <form onsubmit="handleAssignmentSubmit(event)">
+        <p id="asgSubmitDesc" style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 1.25rem;"></p>
+        
+        <div class="form-group">
+          <label class="form-label">Submission Notes & Answers</label>
+          <textarea id="asgNotesInput" class="form-control" rows="4" placeholder="Type or paste your writeup, GitHub repository link, or project notes here..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Attach File (Saved to Google Drive)</label>
+          <input type="file" id="asgFileInput" class="form-control" accept=".pdf,.doc,.docx,.zip,.png,.jpg">
+          <small style="color: var(--text-muted); font-size: 12px;">Supported: PDF, Word, ZIP, Images. Max 10MB.</small>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalAssignmentSubmit')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Submit to Lecturer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- LECTURER GRADING MODAL -->
+  <div id="modalGrading" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="card-title">Grade Student Submission</h3>
+        <button class="btn-icon" onclick="closeModal('modalGrading')">✕</button>
+      </div>
+      <form onsubmit="handleGradingSubmit(event)">
+        <div style="background: var(--bg-main); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+          <div style="font-size: 13px; font-weight: 600;" id="gradeStudentName">Student: Alex Rivera</div>
+          <div style="font-size: 13px; color: var(--text-muted);" id="gradeAssignmentTitle">Assignment: Web Project</div>
+          <div style="font-size: 13.5px; margin-top: 0.5rem;" id="gradeSubmissionBody">Student notes text...</div>
+          <div id="gradeFileLinkContainer" style="margin-top: 0.5rem;"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Points Awarded (out of 100)</label>
+          <input type="number" id="gradePointsInput" class="form-control" required min="0" max="100" placeholder="e.g. 95">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Lecturer Feedback</label>
+          <textarea id="gradeFeedbackInput" class="form-control" rows="3" placeholder="Provide constructive feedback for the student..."></textarea>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalGrading')">Cancel</button>
+          <button type="submit" class="btn btn-success">Publish Grade & Feedback</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- COMPOSE MESSAGE MODAL -->
+  <div id="modalComposeMessage" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="card-title">Compose Direct Message</h3>
+        <button class="btn-icon" onclick="closeModal('modalComposeMessage')">✕</button>
+      </div>
+      <form onsubmit="handleSendMessage(event)">
+        <div class="form-group">
+          <label class="form-label">Recipient</label>
+          <select id="msgRecipientSelect" class="form-control" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Subject</label>
+          <input type="text" id="msgSubjectInput" class="form-control" required placeholder="Course inquiry or discussion...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <textarea id="msgBodyInput" class="form-control" rows="4" required placeholder="Write your message..."></textarea>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('modalComposeMessage')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Send Message</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ROLE SWITCHER QUICK DIALOG -->
+  <div id="modalRoleSwitcher" class="modal-backdrop">
+    <div class="modal-content" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3 class="card-title">Switch Active Role</h3>
+        <button class="btn-icon" onclick="closeModal('modalRoleSwitcher')">✕</button>
+      </div>
+      <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 1.25rem;">
+        Switch personas instantly to test Student, Lecturer, and Admin workflows:
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem;" onclick="switchUserRole('student')">
+          <span style="font-size: 1.2rem; margin-right: 0.5rem;">👨‍🎓</span>
+          <div style="text-align: left;">
+            <div style="font-weight: 700;">Student (Alex Rivera)</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Enroll, study lessons, submit assignments, take quizzes</div>
+          </div>
+        </button>
+        <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem;" onclick="switchUserRole('lecturer')">
+          <span style="font-size: 1.2rem; margin-right: 0.5rem;">👨‍🏫</span>
+          <div style="text-align: left;">
+            <div style="font-weight: 700;">Lecturer (Prof. Marcus Chen)</div>
+            <div style="font-size: 12px; color: var(--text-muted);">Manage courses, add modules, grade submissions, post notices</div>
+          </div>
+        </button>
+        <button class="btn btn-secondary" style="justify-content: flex-start; padding: 0.85rem;" onclick="switchUserRole('admin')">
+          <span style="font-size: 1.2rem; margin-right: 0.5rem;">🛡️</span>
+          <div style="text-align: left;">
+            <div style="font-weight: 700;">Administrator (Dr. Sarah Jenkins)</div>
+            <div style="font-size: 12px; color: var(--text-muted);">System oversight, user management, audit logs, data export</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('JavaScript'); ?>
+</body>
+</html>

@@ -1,0 +1,1702 @@
+<script>
+/**
+ * ==============================================================================
+ * GOOGLE APPS SCRIPT LMS - FRONTEND ENGINE (JavaScript.html)
+ * Vanilla JavaScript ES6+ client handling google.script.run interactions,
+ * state management, dynamic DOM rendering, and role-based views.
+ * ==============================================================================
+ */
+
+// Global Application State
+const LMS_STATE = {
+  currentUser: null,
+  currentRole: 'student', // 'student' | 'lecturer' | 'admin' | 'guest'
+  currentView: 'landing',
+  courses: [],
+  activeCourse: null,
+  activeLesson: null,
+  activeQuiz: null,
+  activeQuizAttempt: { answers: {}, currentQuestionIdx: 0, timerInterval: null, timeLeft: 900 },
+  announcements: [],
+  messages: [],
+  grades: [],
+  users: [],
+  submissions: [],
+  enrollments: [],
+  logs: []
+};
+
+// Seed Mock Data for Standalone Testing / Preview outside Google Apps Script iframe
+const MOCK_DB = {
+  users: [
+    { id: 'usr_stud_1', name: 'Alex Rivera', email: 'student@lms.edu', role: 'student', status: 'active', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', anonymousAlias: 'Scholar Cipher #88', isTemporal: false, joined: '2026-08-10' },
+    { id: 'usr_lect_1', name: 'Prof. Marcus Chen', email: 'lecturer@lms.edu', role: 'lecturer', status: 'active', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', anonymousAlias: 'Faculty Preceptor #42', isTemporal: false, joined: '2026-05-14' },
+    { id: 'usr_admin_1', name: 'Dr. Sarah Jenkins', email: 'admin@lms.edu', role: 'admin', status: 'active', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', anonymousAlias: 'Admin Overseer #01', isTemporal: false, joined: '2026-01-01' }
+  ],
+  courses: [
+    {
+      id: 'crs_cs101',
+      code: 'CS-101',
+      title: 'Modern Web Development with JavaScript',
+      description: 'Master HTML5, CSS3, ES6+ JavaScript, responsive layouts, and cloud deployment.',
+      category: 'Computer Science',
+      level: 'Beginner',
+      duration: '8 Weeks',
+      lecturerId: 'usr_lect_1',
+      lecturerName: 'Prof. Marcus Chen',
+      thumbnail: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600',
+      status: 'published',
+      modules: [
+        {
+          id: 'mod_1',
+          title: 'Module 1: Web Architecture & Semantic HTML',
+          order: 1,
+          lessons: [
+            {
+              id: 'les_1',
+              title: '1.1 Client-Server Web Protocols',
+              contentType: 'video',
+              contentUrl: 'https://www.youtube.com/embed/UB1O30fR-EE',
+              textContent: 'Web architecture operates on client-server request-response protocols over HTTP/HTTPS. The browser client requests DOM resources while the backend server returns HTML, CSS, JSON or executes business logic.',
+              durationMinutes: 20
+            },
+            {
+              id: 'les_2',
+              title: '1.2 Semantic HTML5 & Modern Forms',
+              contentType: 'text',
+              contentUrl: '',
+              textContent: 'Semantic elements such as <header>, <nav>, <main>, and <article> provide semantic meaning to both browsers and assistive screen readers. They also optimize search engine indexability and clean DOM tree hierarchies.',
+              durationMinutes: 30
+            }
+          ]
+        },
+        {
+          id: 'mod_2',
+          title: 'Module 2: Responsive CSS & Flexbox Layouts',
+          order: 2,
+          lessons: [
+            {
+              id: 'les_3',
+              title: '2.1 Mobile-First Media Queries & Layouts',
+              contentType: 'video',
+              contentUrl: 'https://www.youtube.com/embed/rg7Fvvl3taU',
+              textContent: 'Mobile-first styling designs for compact viewports initially before introducing min-width breakpoints for tablets and widescreen monitors.',
+              durationMinutes: 40
+            }
+          ]
+        }
+      ],
+      materials: [
+        {
+          id: 'mat_1',
+          title: 'CS101_Lecture_Notes_Week1.pdf',
+          fileType: 'pdf',
+          fileSize: '2.4 MB',
+          driveViewUrl: 'https://drive.google.com',
+          driveDownloadUrl: 'https://drive.google.com'
+        },
+        {
+          id: 'mat_2',
+          title: 'Responsive_CheatSheet_Guide.pdf',
+          fileType: 'pdf',
+          fileSize: '1.1 MB',
+          driveViewUrl: 'https://drive.google.com',
+          driveDownloadUrl: 'https://drive.google.com'
+        }
+      ],
+      assignments: [
+        {
+          id: 'asg_1',
+          title: 'Project 1: Responsive Portfolio Layout',
+          description: 'Build a mobile-first responsive portfolio site using semantic HTML and CSS Grid/Flexbox.',
+          dueDate: '2026-10-15',
+          maxPoints: 100
+        }
+      ],
+      quizzes: [
+        {
+          id: 'qiz_1',
+          title: 'Module 1 Assessment: HTML & Web Standards',
+          description: 'Assess foundational knowledge of HTML5, HTTP status codes, and browser rendering.',
+          timeLimitMinutes: 15,
+          passPercentage: 70,
+          questions: [
+            {
+              id: 'que_1',
+              questionText: 'Which HTTP status code signifies a successful request?',
+              options: ['200 OK', '404 Not Found', '500 Internal Error', '301 Redirect'],
+              correctAnswer: '200 OK',
+              points: 25
+            },
+            {
+              id: 'que_2',
+              questionText: 'Which HTML5 semantic element should wrap primary navigation links?',
+              options: ['<nav>', '<header>', '<menu>', '<aside>'],
+              correctAnswer: '<nav>',
+              points: 25
+            },
+            {
+              id: 'que_3',
+              questionText: 'In mobile-first responsive CSS architecture, which media query is standard?',
+              options: ['@media (min-width: ...)', '@media (max-width: ...)', '@media (device-width)', 'None'],
+              correctAnswer: '@media (min-width: ...)',
+              points: 25
+            },
+            {
+              id: 'que_4',
+              questionText: 'Does Google Apps Script run server-side in Google Cloud infrastructure?',
+              options: ['Yes, on Google cloud servers', 'No, strictly in browser memory', 'Only via local Node.js', 'None'],
+              correctAnswer: 'Yes, on Google cloud servers',
+              points: 25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: 'crs_ds201',
+      code: 'DS-201',
+      title: 'Data Science & Google Sheets Analysis',
+      description: 'Master spreadsheet data pipelines, statistical functions, charts, and automated Apps Script macros.',
+      category: 'Data Science',
+      level: 'Intermediate',
+      duration: '6 Weeks',
+      lecturerId: 'usr_lect_1',
+      lecturerName: 'Prof. Marcus Chen',
+      thumbnail: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600',
+      status: 'published',
+      modules: [
+        {
+          id: 'mod_ds_1',
+          title: 'Module 1: Advanced Formulas & QUERY Language',
+          order: 1,
+          lessons: [
+            { id: 'les_ds_1', title: '1.1 VLOOKUP, INDEX/MATCH and XLOOKUP', contentType: 'text', contentUrl: '', textContent: 'Learn efficient key-lookup algorithms across multiple tables.', durationMinutes: 30 }
+          ]
+        }
+      ],
+      materials: [],
+      assignments: [],
+      quizzes: []
+    },
+    {
+      id: 'crs_ai301',
+      code: 'AI-301',
+      title: 'Generative AI & Cloud Architecture',
+      description: 'Explore deep neural networks, transformer architectures, prompt orchestration, and REST APIs.',
+      category: 'Artificial Intelligence',
+      level: 'Advanced',
+      duration: '10 Weeks',
+      lecturerId: 'usr_admin_1',
+      lecturerName: 'Dr. Sarah Jenkins',
+      thumbnail: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?w=600',
+      status: 'published',
+      modules: [],
+      materials: [],
+      assignments: [],
+      quizzes: []
+    }
+  ],
+  enrollments: [
+    { id: 'enr_1', studentId: 'usr_stud_1', courseId: 'crs_cs101', progressPercentage: 35, status: 'active', completedLessonIds: ['les_1'] }
+  ],
+  submissions: [
+    {
+      id: 'sub_1',
+      assignmentId: 'asg_1',
+      assignmentTitle: 'Project 1: Responsive Portfolio Layout',
+      studentId: 'usr_stud_1',
+      studentName: 'Alex Rivera',
+      submittedAt: '2026-09-12T14:30:00Z',
+      submissionText: 'Here is my GitHub repository and Drive link for the responsive portfolio layout: https://github.com/alexrivera/portfolio-demo',
+      fileDriveUrl: 'https://drive.google.com/demo-upload',
+      status: 'submitted',
+      pointsEarned: '',
+      feedback: ''
+    }
+  ],
+  announcements: [
+    {
+      id: 'ann_1',
+      title: 'Welcome to Fall Semester!',
+      content: 'All course materials and Drive folders have been synced. Please check your assigned syllabus.',
+      authorName: 'Dr. Sarah Jenkins',
+      authorRole: 'admin',
+      createdAt: '2026-09-10'
+    },
+    {
+      id: 'ann_2',
+      title: 'CS101 Office Hours Scheduled',
+      content: 'Live Q&A will be hosted every Thursday at 3 PM via Google Meet. Link posted in Module 1.',
+      authorName: 'Prof. Marcus Chen',
+      authorRole: 'lecturer',
+      createdAt: '2026-09-11'
+    }
+  ],
+  messages: [
+    {
+      id: 'msg_1',
+      senderId: 'usr_lect_1',
+      senderName: 'Prof. Marcus Chen',
+      receiverId: 'usr_stud_1',
+      subject: 'Feedback on Week 1 Submission',
+      message: 'Great start Alex! Make sure to test your layout on screen widths below 375px before the final submission.',
+      sentAt: '2026-09-12 10:15'
+    }
+  ],
+  grades: [
+    {
+      id: 'grd_1',
+      studentId: 'usr_stud_1',
+      title: 'HTML & Semantic Web Basics',
+      itemType: 'quiz',
+      score: 90,
+      maxScore: 100,
+      percentage: 90,
+      gradedAt: '2026-09-11',
+      feedback: 'Excellent grasp of semantic principles.'
+    }
+  ],
+  logs: [
+    { timestamp: '2026-09-13 08:00', userName: 'Dr. Sarah Jenkins', action: 'SYSTEM_BOOTSTRAP', details: 'Database schema confirmed.' },
+    { timestamp: '2026-09-13 09:15', userName: 'Alex Rivera', action: 'LESSON_COMPLETED', details: 'Completed lesson les_1 in crs_cs101.' }
+  ]
+};
+
+// ==============================================================================
+// SERVER INTERACTION WRAPPER (google.script.run with Promise & Fallback)
+// ==============================================================================
+
+function runServer(funcName, ...args) {
+  return new Promise((resolve, reject) => {
+    // Check if running inside Google Apps Script iframe environment
+    if (typeof google !== 'undefined' && google.script && google.script.run) {
+      google.script.run
+        .withSuccessHandler(response => resolve(response))
+        .withFailureHandler(err => reject(err))
+        [funcName](...args);
+    } else {
+      // Execute local simulation when running in preview/development
+      simulateServerExecution(funcName, args, resolve, reject);
+    }
+  });
+}
+
+function simulateServerExecution(funcName, args, resolve, reject) {
+  setTimeout(() => {
+    try {
+      switch (funcName) {
+        case 'apiLogin': {
+          const [email, password] = args;
+          const user = MOCK_DB.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+          if (!user) {
+            return reject(new Error('Invalid email or password credentials.'));
+          }
+          if (user.isTemporal && user.temporalExpiresAt) {
+            if (Date.now() > new Date(user.temporalExpiresAt).getTime()) {
+              user.status = 'expired';
+              return reject(new Error('Temporary login session has expired.'));
+            }
+          }
+          if (user.status !== 'active') {
+            return reject(new Error('Account is inactive or expired.'));
+          }
+          if (!user.anonymousAlias) {
+            user.anonymousAlias = 'Anonymous ' + (user.role || 'Scholar') + ' #' + Math.floor(100 + Math.random() * 900);
+          }
+          resolve(user);
+          break;
+        }
+        case 'apiRegister': {
+          const [userData] = args;
+          const role = userData.role || 'student';
+          const alias = userData.anonymousAlias || ('Anonymous ' + (role.charAt(0).toUpperCase() + role.slice(1)) + ' #' + Math.floor(100 + Math.random() * 900));
+          const newUser = {
+            id: 'usr_' + Date.now().toString(36),
+            name: userData.name,
+            email: userData.email,
+            role: role,
+            status: 'active',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+            anonymousAlias: alias,
+            isTemporal: false,
+            joined: new Date().toISOString().split('T')[0]
+          };
+          MOCK_DB.users.push(newUser);
+          resolve(newUser);
+          break;
+        }
+        case 'apiCreateTemporalLogin': {
+          const [role, durationMinutes] = args;
+          const duration = parseInt(durationMinutes, 10) || 60;
+          const targetRole = role === 'admin' ? 'admin' : (role === 'lecturer' ? 'lecturer' : 'student');
+          const id = 'temp_' + Date.now().toString(36);
+          const alias = 'Ephemeral ' + (targetRole.charAt(0).toUpperCase() + targetRole.slice(1)) + ' #' + Math.floor(100 + Math.random() * 900);
+          const expiresAt = new Date(Date.now() + duration * 60 * 1000).toISOString();
+          const token = 'tok_' + Math.random().toString(36).substring(2, 12);
+          const tempUser = {
+            id: id,
+            name: 'Temporary ' + (targetRole.charAt(0).toUpperCase() + targetRole.slice(1)),
+            email: id + '@ephemeral.lms',
+            role: targetRole,
+            status: 'active',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+            anonymousAlias: alias,
+            isTemporal: true,
+            temporalToken: token,
+            temporalExpiresAt: expiresAt,
+            joined: new Date().toISOString().split('T')[0]
+          };
+          MOCK_DB.users.push(tempUser);
+          resolve(tempUser);
+          break;
+        }
+        case 'apiValidateSession': {
+          const [userId, temporalToken] = args;
+          const user = MOCK_DB.users.find(u => u.id === userId);
+          if (!user) return resolve({ valid: false });
+          if (user.isTemporal && user.temporalExpiresAt) {
+            const exp = new Date(user.temporalExpiresAt).getTime();
+            if (Date.now() > exp) {
+              user.status = 'expired';
+              return resolve({ valid: false, message: 'Session expired' });
+            }
+            return resolve({
+              valid: true,
+              user: user,
+              isTemporal: true,
+              remainingSeconds: Math.max(0, Math.round((exp - Date.now()) / 1000))
+            });
+          }
+          resolve({ valid: true, user: user, isTemporal: false });
+          break;
+        }
+        case 'apiExtendTemporalSession': {
+          const [userId, temporalToken, additionalMinutes] = args;
+          const user = MOCK_DB.users.find(u => u.id === userId);
+          if (!user) return reject(new Error('User not found'));
+          const mins = parseInt(additionalMinutes, 10) || 30;
+          const currentExp = user.temporalExpiresAt ? new Date(user.temporalExpiresAt).getTime() : Date.now();
+          const newExp = new Date(currentExp + mins * 60 * 1000).toISOString();
+          user.temporalExpiresAt = newExp;
+          user.status = 'active';
+          resolve({
+            success: true,
+            temporalExpiresAt: newExp,
+            remainingSeconds: Math.max(0, Math.round((new Date(newExp).getTime() - Date.now()) / 1000))
+          });
+          break;
+        }
+        case 'apiGetCourses': {
+          resolve(MOCK_DB.courses);
+          break;
+        }
+        case 'apiGetCourseDetail': {
+          const [courseId, userId] = args;
+          const course = MOCK_DB.courses.find(c => c.id === courseId);
+          if (!course) return reject(new Error('Course not found'));
+          const enrollment = MOCK_DB.enrollments.find(e => e.courseId === courseId && e.studentId === userId);
+          resolve({
+            course: course,
+            modules: course.modules || [],
+            materials: course.materials || [],
+            assignments: course.assignments || [],
+            quizzes: course.quizzes || [],
+            enrollment: enrollment,
+            completedLessonIds: enrollment ? (enrollment.completedLessonIds || []) : []
+          });
+          break;
+        }
+        case 'apiEnrollCourse': {
+          const [studentId, courseId] = args;
+          let enr = MOCK_DB.enrollments.find(e => e.studentId === studentId && e.courseId === courseId);
+          if (!enr) {
+            enr = { id: 'enr_' + Date.now(), studentId, courseId, progressPercentage: 0, status: 'active', completedLessonIds: [] };
+            MOCK_DB.enrollments.push(enr);
+          }
+          resolve({ success: true, enrollment: enr });
+          break;
+        }
+        case 'apiMarkLessonComplete': {
+          const [studentId, courseId, lessonId] = args;
+          let enr = MOCK_DB.enrollments.find(e => e.studentId === studentId && e.courseId === courseId);
+          if (enr) {
+            if (!enr.completedLessonIds) enr.completedLessonIds = [];
+            if (!enr.completedLessonIds.includes(lessonId)) {
+              enr.completedLessonIds.push(lessonId);
+            }
+            enr.progressPercentage = Math.min(100, Math.round((enr.completedLessonIds.length / 3) * 100));
+          }
+          resolve({ success: true, progress: enr ? enr.progressPercentage : 100 });
+          break;
+        }
+        case 'apiSubmitAssignment': {
+          const [data] = args;
+          const newSub = {
+            id: 'sub_' + Date.now(),
+            assignmentId: data.assignmentId,
+            assignmentTitle: data.assignmentTitle || 'Assignment',
+            studentId: data.studentId,
+            studentName: data.studentName,
+            studentAnonymousAlias: data.studentAnonymousAlias || 'Anonymous Scholar #' + Math.floor(100 + Math.random() * 900),
+            submittedAt: new Date().toISOString(),
+            submissionText: data.submissionText,
+            fileDriveUrl: data.fileDriveUrl || 'https://drive.google.com/uploaded-file',
+            status: 'submitted',
+            pointsEarned: '',
+            feedback: ''
+          };
+          MOCK_DB.submissions.push(newSub);
+          resolve({ success: true, submissionId: newSub.id });
+          break;
+        }
+        case 'apiGradeSubmission': {
+          const [submissionId, points, feedback] = args;
+          const sub = MOCK_DB.submissions.find(s => s.id === submissionId);
+          if (sub) {
+            sub.pointsEarned = points;
+            sub.feedback = feedback;
+            sub.status = 'graded';
+            MOCK_DB.grades.push({
+              id: 'grd_' + Date.now(),
+              studentId: sub.studentId,
+              title: sub.assignmentTitle || 'Assignment',
+              itemType: 'assignment',
+              score: points,
+              maxScore: 100,
+              percentage: points,
+              gradedAt: new Date().toISOString().split('T')[0],
+              feedback: feedback
+            });
+          }
+          resolve({ success: true });
+          break;
+        }
+        case 'apiSubmitQuiz': {
+          const [attempt] = args;
+          let score = 0;
+          let total = 100;
+          const answers = attempt.answers || {};
+          // Evaluate mock questions
+          if (answers['que_1'] === '200 OK') score += 25;
+          if (answers['que_2'] === '<nav>') score += 25;
+          if (answers['que_3'] === '@media (min-width: ...)') score += 25;
+          if (answers['que_4'] === 'Yes, on Google cloud servers') score += 25;
+
+          const percentage = score;
+          const passed = percentage >= 70;
+
+          MOCK_DB.grades.push({
+            id: 'grd_' + Date.now(),
+            studentId: attempt.studentId,
+            title: 'Module 1 Assessment',
+            itemType: 'quiz',
+            score: score,
+            maxScore: total,
+            percentage: percentage,
+            gradedAt: new Date().toISOString().split('T')[0],
+            feedback: passed ? 'Great work! You passed the assessment.' : 'Score below 70%. Review notes and retry.'
+          });
+
+          resolve({
+            success: true,
+            score: score,
+            totalPoints: total,
+            percentage: percentage,
+            passed: passed,
+            passPercentage: 70
+          });
+          break;
+        }
+        case 'apiAdminGetStats': {
+          resolve({
+            totalUsers: MOCK_DB.users.length,
+            totalCourses: MOCK_DB.courses.length,
+            totalEnrollments: MOCK_DB.enrollments.length,
+            totalSubmissions: MOCK_DB.submissions.length,
+            activeQuizzes: 3
+          });
+          break;
+        }
+        case 'apiAdminGetUsers': {
+          resolve(MOCK_DB.users);
+          break;
+        }
+        case 'apiAdminToggleUser': {
+          const [userId, status] = args;
+          const u = MOCK_DB.users.find(usr => usr.id === userId);
+          if (u) u.status = status;
+          resolve({ success: true, status });
+          break;
+        }
+        case 'apiPostAnnouncement': {
+          const [ann] = args;
+          ann.id = 'ann_' + Date.now();
+          ann.createdAt = new Date().toISOString().split('T')[0];
+          MOCK_DB.announcements.unshift(ann);
+          resolve({ success: true, announcement: ann });
+          break;
+        }
+        case 'apiSendMessage': {
+          const [msg] = args;
+          msg.id = 'msg_' + Date.now();
+          msg.sentAt = new Date().toLocaleTimeString();
+          MOCK_DB.messages.unshift(msg);
+          resolve({ success: true, message: msg });
+          break;
+        }
+        default:
+          resolve({ success: true });
+      }
+    } catch (e) {
+      reject(e);
+    }
+  }, 120);
+}
+
+// ==============================================================================
+// INITIALIZATION & SESSION
+// ==============================================================================
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Set default simulated user (Alex Rivera - Student) for instant interactive experience
+  LMS_STATE.currentUser = MOCK_DB.users[0];
+  LMS_STATE.currentRole = 'student';
+  
+  initUI();
+  navigate('landing');
+});
+
+function initUI() {
+  updateUserSessionUI();
+  loadCoursesData();
+}
+
+function updateUserSessionUI() {
+  const user = LMS_STATE.currentUser;
+  const role = LMS_STATE.currentRole;
+  
+  // Header role badge
+  const headerRoleBadge = document.getElementById('headerRoleBadge');
+  if (headerRoleBadge) {
+    headerRoleBadge.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+    headerRoleBadge.className = 'badge ' + (role === 'admin' ? 'badge-warning' : role === 'lecturer' ? 'badge-primary' : 'badge-success');
+  }
+
+  // Header auth actions
+  const headerAuth = document.getElementById('headerAuthActions');
+  if (headerAuth) {
+    if (user) {
+      headerAuth.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <img src="${user.avatar}" class="user-avatar" style="width: 32px; height: 32px;" alt="${user.name}">
+          <button class="btn btn-secondary btn-sm" onclick="handleLogout()">Logout</button>
+        </div>
+      `;
+    } else {
+      headerAuth.innerHTML = `
+        <button class="btn btn-primary btn-sm" onclick="showAuthModal('login')">Sign In</button>
+      `;
+    }
+  }
+
+  // Sidebar navigation items based on role
+  renderSidebarNav(role);
+
+  // Sidebar footer user
+  const footerUser = document.getElementById('sidebarFooterUser');
+  if (footerUser) {
+    if (user) {
+      footerUser.innerHTML = `
+        <div class="user-profile-summary">
+          <img src="${user.avatar}" class="user-avatar" alt="${user.name}">
+          <div class="user-info-text">
+            <div class="user-name">${user.name}</div>
+            <div class="user-role-badge">${role} • ${user.email}</div>
+          </div>
+        </div>
+      `;
+    } else {
+      footerUser.innerHTML = `
+        <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="showAuthModal('login')">Login / Register</button>
+      `;
+    }
+  }
+}
+
+function renderSidebarNav(role) {
+  const nav = document.getElementById('sidebarNavItems');
+  if (!nav) return;
+
+  let itemsHtml = `
+    <button class="nav-item ${LMS_STATE.currentView === 'landing' ? 'active' : ''}" onclick="navigate('landing')">
+      <span>🏠</span> Home / Overview
+    </button>
+    <button class="nav-item ${LMS_STATE.currentView === 'allCourses' ? 'active' : ''}" onclick="navigate('allCourses')">
+      <span>📚</span> All Courses Catalog
+    </button>
+  `;
+
+  if (role === 'student') {
+    itemsHtml += `
+      <div class="nav-section-title">Student Portal</div>
+      <button class="nav-item ${LMS_STATE.currentView === 'studentDashboard' ? 'active' : ''}" onclick="navigate('studentDashboard')">
+        <span>📊</span> Dashboard
+      </button>
+      <button class="nav-item ${LMS_STATE.currentView === 'studentCourses' ? 'active' : ''}" onclick="navigate('studentCourses')">
+        <span>📖</span> My Courses
+      </button>
+      <button class="nav-item ${LMS_STATE.currentView === 'assignments' ? 'active' : ''}" onclick="navigate('assignments')">
+        <span>📝</span> Assignments
+      </button>
+      <button class="nav-item ${LMS_STATE.currentView === 'results' ? 'active' : ''}" onclick="navigate('results')">
+        <span>🏆</span> Results & Grades
+      </button>
+    `;
+  } else if (role === 'lecturer') {
+    itemsHtml += `
+      <div class="nav-section-title">Lecturer Studio</div>
+      <button class="nav-item ${LMS_STATE.currentView === 'lecturerDashboard' ? 'active' : ''}" onclick="navigate('lecturerDashboard')">
+        <span>🛠️</span> Courses & Studio
+      </button>
+      <button class="nav-item" onclick="showNewCourseModal()">
+        <span>➕</span> Create New Course
+      </button>
+    `;
+  } else if (role === 'admin') {
+    itemsHtml += `
+      <div class="nav-section-title">Administrator</div>
+      <button class="nav-item ${LMS_STATE.currentView === 'adminDashboard' ? 'active' : ''}" onclick="navigate('adminDashboard')">
+        <span>🛡️</span> Admin Dashboard
+      </button>
+      <button class="nav-item" onclick="showNewUserModal()">
+        <span>👥</span> Add User
+      </button>
+    `;
+  }
+
+  itemsHtml += `
+    <div class="nav-section-title">Campus Hub</div>
+    <button class="nav-item ${LMS_STATE.currentView === 'announcements' ? 'active' : ''}" onclick="navigate('announcements')">
+      <span>📢</span> Announcements
+    </button>
+    <button class="nav-item ${LMS_STATE.currentView === 'messages' ? 'active' : ''}" onclick="navigate('messages')">
+      <span>💬</span> Messages
+    </button>
+  `;
+
+  nav.innerHTML = itemsHtml;
+}
+
+// ==============================================================================
+// NAVIGATION & VIEW SWITCHING
+// ==============================================================================
+
+function navigate(viewName, params = {}) {
+  LMS_STATE.currentView = viewName;
+  toggleSidebar(false);
+
+  // Hide all views
+  const views = ['viewLanding', 'viewStudentDashboard', 'viewAllCourses', 'viewCoursePlayer', 'viewLecturerDashboard', 'viewAdminDashboard', 'viewAnnouncements', 'viewMessages', 'viewResults'];
+  views.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  const pageTitle = document.getElementById('pageHeaderTitle');
+
+  switch (viewName) {
+    case 'landing':
+      document.getElementById('viewLanding').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Learning Platform';
+      renderLandingCourses();
+      break;
+
+    case 'studentDashboard':
+    case 'studentCourses':
+      document.getElementById('viewStudentDashboard').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Student Dashboard';
+      renderStudentDashboard();
+      break;
+
+    case 'allCourses':
+      document.getElementById('viewAllCourses').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Course Catalog';
+      renderAllCoursesCatalog();
+      break;
+
+    case 'coursePlayer':
+      document.getElementById('viewCoursePlayer').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Course Lesson Player';
+      if (params.courseId) {
+        loadAndRenderCoursePlayer(params.courseId, params.lessonId);
+      }
+      break;
+
+    case 'lecturerDashboard':
+      document.getElementById('viewLecturerDashboard').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Lecturer Studio';
+      renderLecturerDashboard();
+      break;
+
+    case 'adminDashboard':
+      document.getElementById('viewAdminDashboard').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Admin Control Panel';
+      renderAdminDashboard();
+      break;
+
+    case 'announcements':
+      document.getElementById('viewAnnouncements').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Announcements';
+      renderAnnouncementsList();
+      break;
+
+    case 'messages':
+      document.getElementById('viewMessages').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Direct Messages';
+      renderMessagesList();
+      break;
+
+    case 'assignments':
+    case 'results':
+      document.getElementById('viewResults').style.display = 'block';
+      if (pageTitle) pageTitle.textContent = 'Academic Grades';
+      renderGradesTable();
+      break;
+  }
+
+  renderSidebarNav(LMS_STATE.currentRole);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleSidebar(open) {
+  const sidebar = document.getElementById('appSidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  if (open) {
+    sidebar.classList.add('open');
+    overlay.classList.add('active');
+  } else {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('active');
+  }
+}
+
+// ==============================================================================
+// DATA LOADING & RENDERING
+// ==============================================================================
+
+function loadCoursesData() {
+  runServer('apiGetCourses').then(courses => {
+    LMS_STATE.courses = courses;
+    renderLandingCourses();
+  });
+}
+
+function renderLandingCourses() {
+  const grid = document.getElementById('landingCoursesGrid');
+  if (!grid) return;
+
+  const courses = LMS_STATE.courses.length ? LMS_STATE.courses : MOCK_DB.courses;
+  grid.innerHTML = courses.slice(0, 3).map(c => createCourseCardHtml(c, false)).join('');
+}
+
+function renderAllCoursesCatalog() {
+  const grid = document.getElementById('allCoursesCatalogGrid');
+  if (!grid) return;
+
+  const courses = LMS_STATE.courses.length ? LMS_STATE.courses : MOCK_DB.courses;
+  grid.innerHTML = courses.map(c => createCourseCardHtml(c, false)).join('');
+}
+
+function handleCourseFilter() {
+  const search = (document.getElementById('courseSearchInput')?.value || '').toLowerCase();
+  const cat = document.getElementById('courseCategoryFilter')?.value || 'All';
+  const lvl = document.getElementById('courseLevelFilter')?.value || 'All';
+
+  const courses = LMS_STATE.courses.length ? LMS_STATE.courses : MOCK_DB.courses;
+  const filtered = courses.filter(c => {
+    const matchSearch = !search || c.title.toLowerCase().includes(search) || c.code.toLowerCase().includes(search);
+    const matchCat = cat === 'All' || c.category === cat;
+    const matchLvl = lvl === 'All' || c.level === lvl;
+    return matchSearch && matchCat && matchLvl;
+  });
+
+  const grid = document.getElementById('allCoursesCatalogGrid');
+  if (grid) {
+    grid.innerHTML = filtered.length ? filtered.map(c => createCourseCardHtml(c, false)).join('') : '<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-muted);">No matching courses found.</div>';
+  }
+}
+
+function createCourseCardHtml(course, isEnrolled = false) {
+  const enrolledItem = MOCK_DB.enrollments.find(e => e.courseId === course.id && e.studentId === (LMS_STATE.currentUser ? LMS_STATE.currentUser.id : ''));
+  const progress = enrolledItem ? enrolledItem.progressPercentage : 0;
+
+  return `
+    <div class="course-card">
+      <img src="${course.thumbnail}" alt="${course.title}" class="course-thumb">
+      <div class="course-body">
+        <div class="course-meta-tags">
+          <span class="badge badge-primary">${course.category}</span>
+          <span class="badge badge-warning">${course.level}</span>
+          <span class="badge" style="background: #F1F5F9; color: var(--text-muted);">${course.duration || '6 Weeks'}</span>
+        </div>
+        <h3 class="course-title">${course.title}</h3>
+        <p class="course-desc">${course.description}</p>
+        
+        ${enrolledItem ? `
+          <div style="font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 0.5rem;">
+            <span>Course Progress</span>
+            <span style="font-weight: 700; color: var(--primary);">${progress}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${progress}%;"></div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: 0.75rem;" onclick="navigate('coursePlayer', { courseId: '${course.id}' })">
+            ▶ Continue Lesson
+          </button>
+        ` : `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; border-top: 1px solid var(--border-subtle); padding-top: 0.75rem;">
+            <div style="font-size: 13px; color: var(--text-muted);">Instructor: ${course.lecturerName || 'Faculty'}</div>
+            <button class="btn btn-primary btn-sm" onclick="enrollIntoCourse('${course.id}')">
+              Enroll Now
+            </button>
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+// ==============================================================================
+// STUDENT DASHBOARD
+// ==============================================================================
+
+function renderStudentDashboard() {
+  const user = LMS_STATE.currentUser;
+  const userEnrollments = MOCK_DB.enrollments.filter(e => e.studentId === (user ? user.id : 'usr_stud_1'));
+
+  document.getElementById('studentEnrolledCount').textContent = userEnrollments.length;
+  document.getElementById('studentCompletedCount').textContent = userEnrollments.filter(e => e.progressPercentage === 100).length;
+  document.getElementById('studentPendingAsgCount').textContent = MOCK_DB.submissions.filter(s => s.status === 'submitted').length;
+
+  // Active enrolled courses cards
+  const grid = document.getElementById('studentActiveCoursesGrid');
+  if (grid) {
+    const enrolledCourses = MOCK_DB.courses.filter(c => userEnrollments.some(e => e.courseId === c.id));
+    grid.innerHTML = enrolledCourses.length ? enrolledCourses.map(c => createCourseCardHtml(c, true)).join('') : '<p style="color: var(--text-muted);">You have not enrolled in any courses yet. <a href="javascript:void(0)" onclick="navigate(\'allCourses\')">Browse courses</a>.</p>';
+  }
+
+  // Dashboard announcements
+  const annList = document.getElementById('studentDashboardAnnouncementsList');
+  if (annList) {
+    annList.innerHTML = MOCK_DB.announcements.slice(0, 2).map(a => `
+      <div style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-subtle);">
+        <div style="font-weight: 600; font-size: 13.5px;">${a.title}</div>
+        <div style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">${a.content}</div>
+        <div style="font-size: 11px; color: var(--text-light); margin-top: 4px;">By ${a.authorName} • ${a.createdAt}</div>
+      </div>
+    `).join('');
+  }
+
+  // Dashboard upcoming assignments
+  const asgList = document.getElementById('studentUpcomingDeadlinesList');
+  if (asgList) {
+    asgList.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-subtle);">
+        <div>
+          <div style="font-weight: 600; font-size: 13.5px;">Responsive Web Portfolio</div>
+          <div style="font-size: 12px; color: var(--text-muted);">Course: CS-101 • Due Oct 15, 2026</div>
+        </div>
+        <span class="badge badge-warning">Due Soon</span>
+      </div>
+    `;
+  }
+}
+
+// ==============================================================================
+// COURSE PLAYER & LESSON VIEWER
+// ==============================================================================
+
+function loadAndRenderCoursePlayer(courseId, targetLessonId) {
+  showLoading(true, 'Loading curriculum & materials...');
+  
+  runServer('apiGetCourseDetail', courseId, LMS_STATE.currentUser?.id).then(detail => {
+    showLoading(false);
+    LMS_STATE.activeCourse = detail.course;
+    
+    // Set titles
+    document.getElementById('playerCourseTitle').textContent = detail.course.title;
+    document.getElementById('playerCourseInstructor').textContent = 'Instructor: ' + (detail.course.lecturerName || 'Faculty');
+    
+    // Progress
+    const progress = detail.enrollment ? detail.enrollment.progressPercentage : 0;
+    document.getElementById('playerProgressPercent').textContent = progress + '%';
+    document.getElementById('playerProgressBar').style.width = progress + '%';
+
+    // Build modules and lessons tree
+    renderCurriculumSidebar(detail.modules, detail.completedLessonIds || [], targetLessonId);
+
+    // Render materials list (Drive download files)
+    renderPlayerMaterials(detail.materials);
+
+  }).catch(err => {
+    showLoading(false);
+    showToast('Failed to load course: ' + err.message, 'danger');
+  });
+}
+
+function renderCurriculumSidebar(modules, completedIds, targetLessonId) {
+  const container = document.getElementById('playerCurriculumTree');
+  if (!container) return;
+
+  let allLessons = [];
+  let firstLesson = null;
+
+  let html = '';
+  modules.forEach(mod => {
+    html += `<div class="module-header">${mod.title}</div>`;
+    if (mod.lessons && mod.lessons.length) {
+      mod.lessons.forEach(les => {
+        allLessons.push(les);
+        if (!firstLesson) firstLesson = les;
+        if (targetLessonId && les.id === targetLessonId) firstLesson = les;
+        
+        const isDone = completedIds.includes(les.id);
+        html += `
+          <div class="lesson-list-item ${firstLesson && firstLesson.id === les.id ? 'active' : ''}" id="navLesson_${les.id}" onclick="selectLesson('${les.id}')">
+            <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+              <span>${les.contentType === 'video' ? '📹' : '📄'}</span>
+              <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${les.title}</span>
+            </div>
+            ${isDone ? '<span style="color: var(--success); font-weight: 700;">✓</span>' : ''}
+          </div>
+        `;
+      });
+    }
+  });
+
+  container.innerHTML = html;
+  LMS_STATE.activeCourseLessons = allLessons;
+
+  if (firstLesson) {
+    selectLesson(firstLesson.id);
+  }
+}
+
+function selectLesson(lessonId) {
+  const lesson = (LMS_STATE.activeCourseLessons || []).find(l => l.id === lessonId);
+  if (!lesson) return;
+  LMS_STATE.activeLesson = lesson;
+
+  // Update active state in sidebar
+  document.querySelectorAll('.lesson-list-item').forEach(el => el.classList.remove('active'));
+  const activeNav = document.getElementById('navLesson_' + lessonId);
+  if (activeNav) activeNav.classList.add('active');
+
+  // Populate lesson view
+  document.getElementById('playerLessonTitle').textContent = lesson.title;
+  const badge = document.getElementById('playerLessonTypeBadge');
+  badge.textContent = lesson.contentType === 'video' ? 'Video Lesson' : 'Reading Material';
+  badge.className = 'badge ' + (lesson.contentType === 'video' ? 'badge-primary' : 'badge-warning');
+
+  const videoWrap = document.getElementById('playerVideoWrapper');
+  const videoIframe = document.getElementById('playerVideoIframe');
+  const textContent = document.getElementById('playerTextContent');
+
+  if (lesson.contentType === 'video' && lesson.contentUrl) {
+    videoWrap.style.display = 'block';
+    videoIframe.src = lesson.contentUrl;
+  } else {
+    videoWrap.style.display = 'none';
+    videoIframe.src = '';
+  }
+
+  textContent.innerHTML = lesson.textContent ? `<p>${lesson.textContent}</p>` : '<p style="color: var(--text-muted);">No textual supplementary notes provided for this lesson.</p>';
+}
+
+function navigateLesson(delta) {
+  const list = LMS_STATE.activeCourseLessons || [];
+  if (!list.length || !LMS_STATE.activeLesson) return;
+  const currIdx = list.findIndex(l => l.id === LMS_STATE.activeLesson.id);
+  const newIdx = currIdx + delta;
+  if (newIdx >= 0 && newIdx < list.length) {
+    selectLesson(list[newIdx].id);
+  } else {
+    showToast(delta > 0 ? 'You are at the final lesson of this course!' : 'You are at the first lesson.', 'info');
+  }
+}
+
+function markCurrentLessonComplete() {
+  if (!LMS_STATE.activeLesson || !LMS_STATE.activeCourse) return;
+  
+  showLoading(true, 'Recording progress in Google Sheets...');
+  runServer('apiMarkLessonComplete', LMS_STATE.currentUser?.id, LMS_STATE.activeCourse.id, LMS_STATE.activeLesson.id).then(res => {
+    showLoading(false);
+    showToast('Lesson marked as completed! Progress: ' + res.progress + '%', 'success');
+    document.getElementById('playerProgressPercent').textContent = res.progress + '%';
+    document.getElementById('playerProgressBar').style.width = res.progress + '%';
+  }).catch(err => {
+    showLoading(false);
+    showToast('Error: ' + err.message, 'danger');
+  });
+}
+
+function renderPlayerMaterials(materials) {
+  const container = document.getElementById('playerMaterialsList');
+  if (!container) return;
+
+  if (!materials || !materials.length) {
+    container.innerHTML = '<div style="font-size: 13px; color: var(--text-muted);">No downloadable resources attached.</div>';
+    return;
+  }
+
+  container.innerHTML = materials.map(m => `
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: var(--bg-main); border-radius: var(--radius-md);">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span>📑</span>
+        <div>
+          <div style="font-weight: 600; font-size: 13px;">${m.title}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${m.fileSize || 'PDF Document'}</div>
+        </div>
+      </div>
+      <a href="${m.driveDownloadUrl || 'https://drive.google.com'}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 12px;">
+        ⬇ Download
+      </a>
+    </div>
+  `).join('');
+}
+
+// ==============================================================================
+// QUIZ ENGINE & AUTOMATIC EVALUATION
+// ==============================================================================
+
+function openActiveCourseQuiz() {
+  const course = LMS_STATE.activeCourse || MOCK_DB.courses[0];
+  const quiz = (course.quizzes && course.quizzes.length) ? course.quizzes[0] : MOCK_DB.courses[0].quizzes[0];
+  if (!quiz) {
+    showToast('No quiz available for this module.', 'warning');
+    return;
+  }
+
+  LMS_STATE.activeQuiz = quiz;
+  LMS_STATE.activeQuizAttempt = {
+    answers: {},
+    currentQuestionIdx: 0,
+    timeLeft: (quiz.timeLimitMinutes || 15) * 60
+  };
+
+  document.getElementById('quizModalTitle').textContent = quiz.title;
+  document.getElementById('quizQuestionContainer').style.display = 'block';
+  document.getElementById('quizSummaryContainer').style.display = 'none';
+  document.getElementById('quizFooterActions').style.display = 'flex';
+
+  openModal('modalQuiz');
+  renderQuizQuestionStep();
+  startQuizTimer();
+}
+
+function renderQuizQuestionStep() {
+  const quiz = LMS_STATE.activeQuiz;
+  const questions = quiz.questions || [];
+  const idx = LMS_STATE.activeQuizAttempt.currentQuestionIdx;
+  const q = questions[idx];
+
+  document.getElementById('quizProgressDots').textContent = `Question ${idx + 1} of ${questions.length}`;
+
+  const container = document.getElementById('quizQuestionContainer');
+  if (!q) return;
+
+  const currentAnswer = LMS_STATE.activeQuizAttempt.answers[q.id] || '';
+
+  container.innerHTML = `
+    <div style="margin-bottom: 1.25rem;">
+      <span class="badge badge-primary" style="margin-bottom: 0.5rem;">Question ${idx + 1}</span>
+      <h4 style="font-size: 1.15rem; margin-top: 0.25rem;">${q.questionText}</h4>
+    </div>
+    <div id="quizOptionsList">
+      ${(q.options || []).map(opt => `
+        <div class="quiz-option-card ${currentAnswer === opt ? 'selected' : ''}" onclick="selectQuizAnswer('${q.id}', '${opt.replace(/'/g, "\\'")}')">
+          <input type="radio" name="quizOpt_${q.id}" ${currentAnswer === opt ? 'checked' : ''} style="margin-right: 0.5rem;">
+          <span>${opt}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Control prev/next/submit buttons
+  document.getElementById('btnQuizPrev').style.display = idx > 0 ? 'inline-flex' : 'none';
+  const isLast = idx === questions.length - 1;
+  document.getElementById('btnQuizNext').style.display = isLast ? 'none' : 'inline-flex';
+  document.getElementById('btnQuizSubmit').style.display = isLast ? 'inline-flex' : 'none';
+}
+
+function selectQuizAnswer(questionId, answer) {
+  LMS_STATE.activeQuizAttempt.answers[questionId] = answer;
+  renderQuizQuestionStep();
+}
+
+function navQuizQuestion(delta) {
+  const questions = LMS_STATE.activeQuiz.questions || [];
+  const newIdx = LMS_STATE.activeQuizAttempt.currentQuestionIdx + delta;
+  if (newIdx >= 0 && newIdx < questions.length) {
+    LMS_STATE.activeQuizAttempt.currentQuestionIdx = newIdx;
+    renderQuizQuestionStep();
+  }
+}
+
+function startQuizTimer() {
+  clearInterval(LMS_STATE.activeQuizAttempt.timerInterval);
+  const timerText = document.getElementById('quizTimerText');
+
+  LMS_STATE.activeQuizAttempt.timerInterval = setInterval(() => {
+    LMS_STATE.activeQuizAttempt.timeLeft--;
+    const m = Math.floor(LMS_STATE.activeQuizAttempt.timeLeft / 60);
+    const s = LMS_STATE.activeQuizAttempt.timeLeft % 60;
+    if (timerText) {
+      timerText.textContent = `Time Remaining: ${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+    if (LMS_STATE.activeQuizAttempt.timeLeft <= 0) {
+      clearInterval(LMS_STATE.activeQuizAttempt.timerInterval);
+      showToast('Time expired! Submitting your answers automatically.', 'warning');
+      submitActiveQuiz();
+    }
+  }, 1000);
+}
+
+function submitActiveQuiz() {
+  clearInterval(LMS_STATE.activeQuizAttempt.timerInterval);
+  showLoading(true, 'Grading assessment against question keys...');
+
+  const attemptData = {
+    quizId: LMS_STATE.activeQuiz.id,
+    studentId: LMS_STATE.currentUser?.id || 'usr_stud_1',
+    answers: LMS_STATE.activeQuizAttempt.answers
+  };
+
+  runServer('apiSubmitQuiz', attemptData).then(result => {
+    showLoading(false);
+    
+    // Display result summary
+    document.getElementById('quizQuestionContainer').style.display = 'none';
+    document.getElementById('quizFooterActions').style.display = 'none';
+    
+    const summary = document.getElementById('quizSummaryContainer');
+    summary.style.display = 'block';
+    summary.innerHTML = `
+      <div style="font-size: 3rem; margin-bottom: 0.5rem;">${result.passed ? '🎉' : '📖'}</div>
+      <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem;">${result.passed ? 'Assessment Passed!' : 'Assessment Incomplete'}</h3>
+      <p style="color: var(--text-muted); margin-bottom: 1.25rem;">
+        You scored <strong>${result.score}</strong> out of <strong>${result.totalPoints}</strong> (${result.percentage}%).
+        Required passing score: ${result.passPercentage}%.
+      </p>
+      <div style="display: flex; justify-content: center; gap: 0.75rem;">
+        <button class="btn btn-primary" onclick="closeModal('modalQuiz'); navigate('results');">View All Grades</button>
+        <button class="btn btn-secondary" onclick="closeModal('modalQuiz');">Return to Course</button>
+      </div>
+    `;
+  }).catch(err => {
+    showLoading(false);
+    showToast('Failed to evaluate quiz: ' + err.message, 'danger');
+  });
+}
+
+// ==============================================================================
+// ASSIGNMENT SUBMISSION & DRIVE UPLOAD
+// ==============================================================================
+
+function openActiveCourseAssignment() {
+  const course = LMS_STATE.activeCourse || MOCK_DB.courses[0];
+  const asg = (course.assignments && course.assignments.length) ? course.assignments[0] : MOCK_DB.courses[0].assignments[0];
+  if (!asg) {
+    showToast('No active assignments found for this course.', 'info');
+    return;
+  }
+  document.getElementById('asgSubmitTitle').textContent = 'Submit: ' + asg.title;
+  document.getElementById('asgSubmitDesc').textContent = asg.description + ' (Max Points: ' + asg.maxPoints + ')';
+  openModal('modalAssignmentSubmit');
+}
+
+function handleAssignmentSubmit(e) {
+  e.preventDefault();
+  const notes = document.getElementById('asgNotesInput').value;
+  const fileInput = document.getElementById('asgFileInput');
+  const file = fileInput.files[0];
+
+  showLoading(true, file ? 'Uploading attachment to Google Drive...' : 'Saving submission...');
+
+  const processSubmission = (driveUrl) => {
+    const payload = {
+      assignmentId: 'asg_1',
+      assignmentTitle: 'Project 1: Responsive Portfolio Layout',
+      studentId: LMS_STATE.currentUser?.id || 'usr_stud_1',
+      studentName: LMS_STATE.currentUser?.name || 'Alex Rivera',
+      submissionText: notes,
+      fileDriveUrl: driveUrl
+    };
+
+    runServer('apiSubmitAssignment', payload).then(res => {
+      showLoading(false);
+      closeModal('modalAssignmentSubmit');
+      showToast('Assignment successfully submitted to instructor!', 'success');
+      e.target.reset();
+    }).catch(err => {
+      showLoading(false);
+      showToast('Submission error: ' + err.message, 'danger');
+    });
+  };
+
+  if (file) {
+    // Read file as Base64 for Google Apps Script DriveApp upload
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      const base64 = evt.target.result;
+      runServer('apiUploadToDrive', base64, file.name, file.type).then(res => {
+        processSubmission(res.viewUrl || res.downloadUrl);
+      }).catch(() => {
+        // Fallback simulated drive upload link
+        processSubmission('https://drive.google.com/demo-upload/' + encodeURIComponent(file.name));
+      });
+    };
+    reader.readAsDataURL(file);
+  } else {
+    processSubmission('');
+  }
+}
+
+// ==============================================================================
+// LECTURER DASHBOARD & GRADING WORKFLOW
+// ==============================================================================
+
+function renderLecturerDashboard() {
+  document.getElementById('lecturerCourseCount').textContent = MOCK_DB.courses.length;
+  document.getElementById('lecturerPendingGradesCount').textContent = MOCK_DB.submissions.filter(s => s.status === 'submitted').length;
+  document.getElementById('lecturerTotalStudents').textContent = MOCK_DB.users.filter(u => u.role === 'student').length;
+
+  // Lecturer courses table
+  const coursesBody = document.getElementById('lecturerCoursesTableBody');
+  if (coursesBody) {
+    coursesBody.innerHTML = MOCK_DB.courses.map(c => `
+      <tr>
+        <td><strong>${c.code}</strong></td>
+        <td>${c.title}</td>
+        <td><span class="badge badge-primary">${c.category}</span></td>
+        <td><span class="badge badge-warning">${c.level}</span></td>
+        <td>${(c.modules || []).length} Modules</td>
+        <td>
+          <div style="display: flex; gap: 0.35rem;">
+            <button class="btn btn-secondary btn-sm" onclick="navigate('coursePlayer', { courseId: '${c.id}' })">Preview</button>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('Edit modal for ${c.code} opened.', 'info')">Edit</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // Pending Submissions Table
+  const subsBody = document.getElementById('lecturerSubmissionsTableBody');
+  if (subsBody) {
+    subsBody.innerHTML = MOCK_DB.submissions.map(s => `
+      <tr>
+        <td><strong>${s.studentName}</strong></td>
+        <td>${s.assignmentTitle || 'Assignment'}</td>
+        <td>${s.submittedAt.split('T')[0]}</td>
+        <td><span class="badge ${s.status === 'graded' ? 'badge-success' : 'badge-warning'}">${s.status}</span></td>
+        <td>${s.pointsEarned ? s.pointsEarned + ' / 100' : '—'}</td>
+        <td>
+          <button class="btn btn-primary btn-sm" onclick="openGradingModal('${s.id}')">
+            ${s.status === 'graded' ? 'Re-Grade' : 'Grade Submission'}
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+function openGradingModal(submissionId) {
+  const sub = MOCK_DB.submissions.find(s => s.id === submissionId);
+  if (!sub) return;
+
+  LMS_STATE.activeGradingSubmission = sub;
+  document.getElementById('gradeStudentName').textContent = 'Student: ' + sub.studentName;
+  document.getElementById('gradeAssignmentTitle').textContent = 'Assessment: ' + (sub.assignmentTitle || 'Assignment');
+  document.getElementById('gradeSubmissionBody').textContent = sub.submissionText || 'No written remarks provided.';
+
+  const fileContainer = document.getElementById('gradeFileLinkContainer');
+  if (sub.fileDriveUrl) {
+    fileContainer.innerHTML = `<a href="${sub.fileDriveUrl}" target="_blank" style="font-size: 12px; color: var(--primary); font-weight: 600;">📎 View Drive Attachment</a>`;
+  } else {
+    fileContainer.innerHTML = '';
+  }
+
+  document.getElementById('gradePointsInput').value = sub.pointsEarned || 95;
+  document.getElementById('gradeFeedbackInput').value = sub.feedback || 'Well-structured assignment meeting all specifications.';
+
+  openModal('modalGrading');
+}
+
+function handleGradingSubmit(e) {
+  e.preventDefault();
+  const sub = LMS_STATE.activeGradingSubmission;
+  if (!sub) return;
+
+  const points = Number(document.getElementById('gradePointsInput').value);
+  const feedback = document.getElementById('gradeFeedbackInput').value;
+
+  showLoading(true, 'Recording grade in Google Sheets database...');
+  runServer('apiGradeSubmission', sub.id, points, feedback).then(res => {
+    showLoading(false);
+    closeModal('modalGrading');
+    showToast('Grade and feedback published successfully!', 'success');
+    renderLecturerDashboard();
+  }).catch(err => {
+    showLoading(false);
+    showToast('Grading error: ' + err.message, 'danger');
+  });
+}
+
+// ==============================================================================
+// ADMINISTRATOR DASHBOARD
+// ==============================================================================
+
+function renderAdminDashboard() {
+  document.getElementById('adminTotalUsers').textContent = MOCK_DB.users.length;
+  document.getElementById('adminTotalCourses').textContent = MOCK_DB.courses.length;
+  document.getElementById('adminTotalEnrollments').textContent = MOCK_DB.enrollments.length;
+  document.getElementById('adminTotalLogs').textContent = MOCK_DB.logs.length;
+
+  filterAdminUsers();
+  renderAdminLogs();
+}
+
+function filterAdminUsers() {
+  const query = (document.getElementById('adminUserSearchInput')?.value || '').toLowerCase();
+  const tbody = document.getElementById('adminUsersTableBody');
+  if (!tbody) return;
+
+  const filtered = MOCK_DB.users.filter(u => !query || u.name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query));
+
+  tbody.innerHTML = filtered.map(u => `
+    <tr>
+      <td>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <img src="${u.avatar}" class="user-avatar" style="width: 28px; height: 28px;">
+          <strong>${u.name}</strong>
+        </div>
+      </td>
+      <td>${u.email}</td>
+      <td><span class="badge ${u.role === 'admin' ? 'badge-warning' : u.role === 'lecturer' ? 'badge-primary' : 'badge-success'}">${u.role}</span></td>
+      <td><span class="badge ${u.status === 'active' ? 'badge-success' : 'badge-danger'}">${u.status}</span></td>
+      <td>${u.joined || '2026-08-01'}</td>
+      <td>
+        <div style="display: flex; gap: 0.35rem;">
+          <button class="btn btn-secondary btn-sm" onclick="toggleUserStatus('${u.id}')">${u.status === 'active' ? 'Deactivate' : 'Activate'}</button>
+          <button class="btn btn-secondary btn-sm" onclick="adminResetPassword('${u.id}')">Reset Pass</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function toggleUserStatus(userId) {
+  const u = MOCK_DB.users.find(usr => usr.id === userId);
+  if (!u) return;
+  const newStatus = u.status === 'active' ? 'inactive' : 'active';
+  
+  runServer('apiAdminToggleUser', userId, newStatus).then(() => {
+    u.status = newStatus;
+    showToast(`User status updated to ${newStatus}.`, 'success');
+    filterAdminUsers();
+  });
+}
+
+function adminResetPassword(userId) {
+  const u = MOCK_DB.users.find(usr => usr.id === userId);
+  if (!u) return;
+  showToast(`Password for ${u.name} reset to: TempPass2026!`, 'info');
+}
+
+function renderAdminLogs() {
+  const tbody = document.getElementById('adminLogsTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = MOCK_DB.logs.map(log => `
+    <tr>
+      <td style="white-space: nowrap; font-size: 12.5px; color: var(--text-muted);">${log.timestamp}</td>
+      <td><strong>${log.userName}</strong></td>
+      <td><span class="badge badge-primary">${log.action}</span></td>
+      <td style="font-size: 13px;">${log.details}</td>
+    </tr>
+  `).join('');
+}
+
+function exportLmsData(tableName) {
+  const data = tableName === 'Users' ? MOCK_DB.users : tableName === 'Enrollments' ? MOCK_DB.enrollments : MOCK_DB.logs;
+  if (!data.length) {
+    showToast('No records available to export.', 'warning');
+    return;
+  }
+
+  // Convert array of objects to CSV
+  const headers = Object.keys(data[0]);
+  const csvRows = [headers.join(',')];
+  data.forEach(item => {
+    const values = headers.map(h => {
+      const val = item[h] === undefined ? '' : String(item[h]).replace(/"/g, '""');
+      return `"${val}"`;
+    });
+    csvRows.push(values.join(','));
+  });
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `LMS_${tableName}_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${tableName} to CSV file!`, 'success');
+}
+
+// ==============================================================================
+// ANNOUNCEMENTS & MESSAGES
+// ==============================================================================
+
+function renderAnnouncementsList() {
+  const container = document.getElementById('announcementsListContainer');
+  if (!container) return;
+
+  container.innerHTML = MOCK_DB.announcements.map(a => `
+    <div class="card">
+      <div class="card-header" style="margin-bottom: 0.5rem;">
+        <h3 class="card-title" style="font-size: 1.15rem;">${a.title}</h3>
+        <span class="badge ${a.authorRole === 'admin' ? 'badge-warning' : 'badge-primary'}">${a.authorRole}</span>
+      </div>
+      <p style="font-size: 14px; color: var(--text-main); margin-bottom: 0.75rem;">${a.content}</p>
+      <div style="font-size: 12px; color: var(--text-muted);">Posted by ${a.authorName} on ${a.createdAt}</div>
+    </div>
+  `).join('');
+}
+
+function showNewAnnouncementModal() {
+  const title = prompt('Announcement Title:');
+  if (!title) return;
+  const content = prompt('Announcement Message:');
+  if (!content) return;
+
+  const newAnn = {
+    title: title,
+    content: content,
+    authorName: LMS_STATE.currentUser?.name || 'Administrator',
+    authorRole: LMS_STATE.currentRole
+  };
+
+  runServer('apiPostAnnouncement', newAnn).then(res => {
+    showToast('Announcement posted to all students!', 'success');
+    renderAnnouncementsList();
+  });
+}
+
+function renderMessagesList() {
+  const container = document.getElementById('messagesListContainer');
+  if (!container) return;
+
+  container.innerHTML = MOCK_DB.messages.map(m => `
+    <div class="card" style="padding: 1.25rem;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+        <strong>${m.senderName}</strong>
+        <span style="font-size: 12px; color: var(--text-muted);">${m.sentAt}</span>
+      </div>
+      <div style="font-weight: 600; font-size: 13.5px; color: var(--primary); margin-bottom: 0.25rem;">${m.subject}</div>
+      <p style="font-size: 13.5px; color: var(--text-muted);">${m.message}</p>
+    </div>
+  `).join('');
+}
+
+function showComposeMessageModal() {
+  const sel = document.getElementById('msgRecipientSelect');
+  if (sel) {
+    sel.innerHTML = MOCK_DB.users.map(u => `<option value="${u.id}">${u.name} (${u.role})</option>`).join('');
+  }
+  openModal('modalComposeMessage');
+}
+
+function handleSendMessage(e) {
+  e.preventDefault();
+  const sub = document.getElementById('msgSubjectInput').value;
+  const body = document.getElementById('msgBodyInput').value;
+  const sel = document.getElementById('msgRecipientSelect');
+  const receiverName = sel.options[sel.selectedIndex].text;
+
+  const newMsg = {
+    senderId: LMS_STATE.currentUser?.id || 'usr_stud_1',
+    senderName: LMS_STATE.currentUser?.name || 'Alex Rivera',
+    receiverId: sel.value,
+    receiverName: receiverName,
+    subject: sub,
+    message: body
+  };
+
+  runServer('apiSendMessage', newMsg).then(() => {
+    closeModal('modalComposeMessage');
+    showToast('Message sent to ' + receiverName, 'success');
+    renderMessagesList();
+  });
+}
+
+function renderGradesTable() {
+  const tbody = document.getElementById('gradesTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = MOCK_DB.grades.map(g => `
+    <tr>
+      <td><strong>${g.title}</strong></td>
+      <td><span class="badge ${g.itemType === 'quiz' ? 'badge-primary' : 'badge-warning'}">${g.itemType}</span></td>
+      <td>${g.score}</td>
+      <td>${g.maxScore}</td>
+      <td><strong>${g.percentage}%</strong></td>
+      <td>${g.gradedAt}</td>
+      <td style="font-size: 13px; color: var(--text-muted);">${g.feedback}</td>
+    </tr>
+  `).join('');
+}
+
+// ==============================================================================
+// AUTHENTICATION & ROLE SWITCHING
+// ==============================================================================
+
+function showAuthModal(mode = 'login') {
+  toggleAuthForm(mode);
+  openModal('modalAuth');
+}
+
+function toggleAuthForm(mode) {
+  document.getElementById('formLogin').style.display = mode === 'login' ? 'block' : 'none';
+  document.getElementById('formRegister').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('formForgot').style.display = mode === 'forgot' ? 'block' : 'none';
+
+  const titles = { login: 'Account Sign In', register: 'Student / Lecturer Registration', forgot: 'Password Recovery' };
+  document.getElementById('authModalTitle').textContent = titles[mode];
+}
+
+function handleLoginSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const pass = document.getElementById('loginPassword').value;
+
+  showLoading(true, 'Verifying credentials with Google Sheets database...');
+  runServer('apiLogin', email, pass).then(user => {
+    showLoading(false);
+    LMS_STATE.currentUser = user;
+    LMS_STATE.currentRole = user.role;
+    updateUserSessionUI();
+    closeModal('modalAuth');
+    showToast(`Welcome back, ${user.name}!`, 'success');
+    navigate(user.role === 'admin' ? 'adminDashboard' : user.role === 'lecturer' ? 'lecturerDashboard' : 'studentDashboard');
+  }).catch(err => {
+    showLoading(false);
+    showToast(err.message, 'danger');
+  });
+}
+
+function handleRegisterSubmit(e) {
+  e.preventDefault();
+  const name = document.getElementById('regName').value;
+  const email = document.getElementById('regEmail').value;
+  const role = document.getElementById('regRole').value;
+  const pass = document.getElementById('regPassword').value;
+
+  showLoading(true, 'Registering user in Users table...');
+  runServer('apiRegister', { name, email, role, password: pass }).then(user => {
+    showLoading(false);
+    LMS_STATE.currentUser = user;
+    LMS_STATE.currentRole = user.role;
+    updateUserSessionUI();
+    closeModal('modalAuth');
+    showToast(`Account created successfully! Welcome to the LMS.`, 'success');
+    navigate(role === 'lecturer' ? 'lecturerDashboard' : 'studentDashboard');
+  }).catch(err => {
+    showLoading(false);
+    showToast(err.message, 'danger');
+  });
+}
+
+function handleForgotSubmit(e) {
+  e.preventDefault();
+  closeModal('modalAuth');
+  showToast('Password reset link sent to your email address.', 'info');
+}
+
+function handleLogout() {
+  LMS_STATE.currentUser = null;
+  LMS_STATE.currentRole = 'student';
+  updateUserSessionUI();
+  showToast('You have been signed out.', 'info');
+  navigate('landing');
+}
+
+function showRoleSwitcherModal() {
+  openModal('modalRoleSwitcher');
+}
+
+function switchUserRole(role) {
+  LMS_STATE.currentRole = role;
+  if (role === 'student') LMS_STATE.currentUser = MOCK_DB.users[0];
+  else if (role === 'lecturer') LMS_STATE.currentUser = MOCK_DB.users[1];
+  else if (role === 'admin') LMS_STATE.currentUser = MOCK_DB.users[2];
+
+  updateUserSessionUI();
+  closeModal('modalRoleSwitcher');
+  showToast(`Switched persona to: ${role.toUpperCase()}`, 'success');
+
+  navigate(role === 'admin' ? 'adminDashboard' : role === 'lecturer' ? 'lecturerDashboard' : 'studentDashboard');
+}
+
+function enrollIntoCourse(courseId) {
+  showLoading(true, 'Registering enrollment in Google Sheets...');
+  runServer('apiEnrollCourse', LMS_STATE.currentUser?.id || 'usr_stud_1', courseId).then(res => {
+    showLoading(false);
+    showToast('Enrolled successfully! Redirecting to lesson player...', 'success');
+    navigate('coursePlayer', { courseId });
+  }).catch(err => {
+    showLoading(false);
+    showToast('Enrollment failed: ' + err.message, 'danger');
+  });
+}
+
+// ==============================================================================
+// MODAL & UTILITY HELPERS
+// ==============================================================================
+
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.add('active');
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.classList.remove('active');
+}
+
+function showLoading(show, text = 'Processing...') {
+  const overlay = document.getElementById('loadingOverlay');
+  const txt = document.getElementById('loadingText');
+  if (txt) txt.textContent = text;
+  if (overlay) overlay.style.display = show ? 'flex' : 'none';
+}
+
+function showToast(message, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<span>${type === 'success' ? '✓' : type === 'danger' ? '⚠️' : 'ℹ️'}</span> <div>${message}</div>`;
+  
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(10px)';
+    toast.style.transition = 'all 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+</script>
